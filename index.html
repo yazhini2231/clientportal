@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ClientHub | Project Portal</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+<header class="topbar">
+  <div class="brand"><span class="brand-icon">C</span><div><strong>ClientHub</strong><small>PROJECT PORTAL</small></div></div>
+  <div class="top-right"><span class="online-dot"></span> Workspace online <span class="avatar">Y</span></div>
+</header>
+<div class="layout">
+  <aside class="sidebar">
+    <p class="side-label">WORKSPACE</p>
+    <a class="nav active" href="#overview">▦ <span>Overview</span></a>
+    <a class="nav" href="#projects">◫ <span>Projects</span></a>
+    <a class="nav" href="#tasks">✓ <span>Tasks</span></a>
+    <a class="nav" href="#documents">▤ <span>Documents</span></a>
+    <a class="nav" href="#messages">☏ <span>Messages</span></a>
+    <div class="sidebar-note"><div class="note-icon">✦</div><strong>Good work starts<br>with clear updates.</strong><p>Keep your projects, files and conversations in one place.</p></div>
+    <small class="side-foot">CLIENTHUB · DEMO</small>
+  </aside>
+  <main class="main">
+    <section id="overview" class="welcome">
+      <div><p class="eyebrow">YOUR WORKSPACE</p><h1>Project overview</h1><p class="muted">Track progress, manage tasks and stay connected with your team.</p></div>
+      <a class="primary-btn" href="#projects">＋ New project</a>
+    </section>
+    {% with items = get_flashed_messages(with_categories=true) %}
+      {% if items %}<div class="flash-wrap">{% for category, message in items %}<div class="flash {{ category }}">{{ message }}</div>{% endfor %}</div>{% endif %}
+    {% endwith %}
+    <section class="stats">
+      <div class="stat-card"><div class="stat-top"><span>Active projects</span><span class="stat-icon purple">◫</span></div><strong>{{ stats.projects }}</strong><small>Projects in your workspace</small></div>
+      <div class="stat-card"><div class="stat-top"><span>Open tasks</span><span class="stat-icon orange">✓</span></div><strong>{{ stats.tasks }}</strong><small>Tasks awaiting completion</small></div>
+      <div class="stat-card"><div class="stat-top"><span>Shared documents</span><span class="stat-icon blue">▤</span></div><strong>{{ stats.documents }}</strong><small>Files available to the team</small></div>
+      <div class="stat-card"><div class="stat-top"><span>Messages</span><span class="stat-icon green">☏</span></div><strong>{{ stats.messages }}</strong><small>Workspace updates posted</small></div>
+    </section>
+    <section id="projects" class="panel">
+      <div class="section-head"><div><h2>Projects</h2><p class="muted">A quick view of current client work.</p></div><span class="count">{{ projects|length }} total</span></div>
+      <div class="project-list">
+        {% for project in projects %}
+        <article class="project-row">
+          <div class="project-mark">{{ project.name[0]|upper }}</div>
+          <div class="project-info"><strong>{{ project.name }}</strong><small>{{ project.client }} · Due {{ project.due_date or 'Not set' }}</small><div class="progress"><span style="width: {{ project.progress }}%"></span></div></div>
+          <div class="project-end"><span class="status {{ project.status|lower|replace(' ', '-') }}">{{ project.status }}</span><strong>{{ project.progress }}%</strong></div>
+        </article>
+        {% else %}<p class="empty">No projects yet. Add your first project below.</p>{% endfor %}
+      </div>
+      <details class="add-form"><summary>＋ Add a project</summary><form action="{{ url_for('add_project') }}" method="post" class="form-grid"><label>Project name<input name="name" required placeholder="e.g. Website Development"></label><label>Client name<input name="client" required placeholder="e.g. ABC Company"></label><label>Due date<input name="due_date" type="date"></label><button class="primary-btn" type="submit">Create project</button></form></details>
+    </section>
+    <div class="two-col">
+      <section id="tasks" class="panel">
+        <div class="section-head"><div><h2>Task management</h2><p class="muted">Assign work and update its status.</p></div></div>
+        <form action="{{ url_for('add_task') }}" method="post" class="stack-form">
+          <input name="title" required placeholder="Add a new task...">
+          <div class="inline-fields"><select name="project_id"><option value="">No project</option>{% for project in projects %}<option value="{{ project.id }}">{{ project.name }}</option>{% endfor %}</select><input name="assigned_to" placeholder="Assigned to"></div>
+          <button class="primary-btn" type="submit">＋ Add task</button>
+        </form>
+        <div class="task-list">
+        {% for task in tasks %}
+          <div class="task-row"><div class="task-check {% if task.status == 'Completed' %}done{% endif %}">{% if task.status == 'Completed' %}✓{% else %}•{% endif %}</div><div class="task-info"><strong>{{ task.title }}</strong><small>{{ task.project_name or 'General task' }} · {{ task.assigned_to }}</small></div><form action="{{ url_for('update_task', task_id=task.id) }}" method="post"><select name="status" onchange="this.form.submit()" aria-label="Task status"><option {% if task.status=='Pending' %}selected{% endif %}>Pending</option><option {% if task.status=='In Progress' %}selected{% endif %}>In Progress</option><option {% if task.status=='Completed' %}selected{% endif %}>Completed</option></select></form></div>
+        {% else %}<p class="empty">No tasks added yet.</p>{% endfor %}
+        </div>
+      </section>
+      <section id="documents" class="panel">
+        <div class="section-head"><div><h2>Shared documents</h2><p class="muted">Upload files for your project team.</p></div></div>
+        <form action="{{ url_for('upload_document') }}" method="post" enctype="multipart/form-data" class="upload-box"><div class="upload-symbol">↑</div><strong>Choose a document</strong><small>PDF, Office files, images, TXT or ZIP</small><input type="file" name="document" required><button class="primary-btn" type="submit">Upload file</button></form>
+        <div class="document-list">
+          {% for doc in documents %}<div class="document-row"><span class="file-icon">▤</span><div><a href="{{ url_for('download_document', filename=doc.filename) }}">{{ doc.original_name }}</a><small>{{ doc.uploaded_at }}</small></div><a class="download" href="{{ url_for('download_document', filename=doc.filename) }}">↓</a></div>
+          {% else %}<p class="empty">Your uploaded files will appear here.</p>{% endfor %}
+        </div>
+      </section>
+    </div>
+    <section id="messages" class="panel messages-panel">
+      <div class="section-head"><div><h2>Team communication</h2><p class="muted">Share updates and keep conversations together.</p></div></div>
+      <form action="{{ url_for('add_message') }}" method="post" class="message-form"><input name="sender" placeholder="Your name (e.g. Yazhini)"><textarea name="message" required placeholder="Write a project update or message..."></textarea><button class="primary-btn" type="submit">Send message ↗</button></form>
+      <div class="message-list">{% for message in messages %}<article class="message"><div class="message-avatar">{{ message.sender[0]|upper }}</div><div><div class="message-meta"><strong>{{ message.sender }}</strong><small>{{ message.created_at }}</small></div><p>{{ message.message }}</p></div></article>{% else %}<p class="empty">No messages yet.</p>{% endfor %}</div>
+    </section>
+    <footer>ClientHub · Client Portal & Project Management · Built with Python, Flask and SQLite</footer>
+  </main>
+</div>
+</body>
+</html>
